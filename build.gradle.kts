@@ -22,6 +22,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.json:json:20250517")
     implementation("org.projectlombok:lombok:1.18.38")
+	implementation("com.squareup.okhttp3:okhttp:3.2.0")
     annotationProcessor("org.projectlombok:lombok:1.18.38") // ✅ REQUIRED for @Data, @Getter, etc.
 
     runtimeOnly("com.h2database:h2")
