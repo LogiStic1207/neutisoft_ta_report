@@ -1,32 +1,37 @@
 package com.neutisoft.main.entity;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
+import jakarta.persistence.*;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Getter
+@Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class Kline {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
-	
+
+	@Column(nullable = false)
+	private LocalDateTime openTime;
+
 	@Column(nullable = false)
 	private BigDecimal high;
-	
+
 	@Column(nullable = false)
 	private BigDecimal low;
-	
+
 	@Column(nullable = false)
 	private BigDecimal close;
+
+	public Kline(LocalDateTime openTime, BigDecimal high, BigDecimal low, BigDecimal close) {
+		this.openTime = openTime;
+		this.high = high;
+		this.low = low;
+		this.close = close;
+	}
 }
