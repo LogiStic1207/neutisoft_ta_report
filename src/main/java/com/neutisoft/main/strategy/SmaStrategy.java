@@ -10,35 +10,6 @@ import java.util.List;
 
 public class SmaStrategy {
 
-    public static class Trade {
-        public LocalDateTime entryTime;
-        public LocalDateTime exitTime;
-        public BigDecimal entryPrice;
-        public BigDecimal exitPrice;
-        public String position; // "LONG" or "SHORT"
-
-        public Trade(LocalDateTime entryTime, LocalDateTime exitTime, BigDecimal entryPrice, BigDecimal exitPrice,
-                String position) {
-            this.entryTime = entryTime;
-            this.exitTime = exitTime;
-            this.entryPrice = entryPrice;
-            this.exitPrice = exitPrice;
-            this.position = position;
-        }
-
-        public BigDecimal getProfit() {
-            return position.equals("LONG")
-                    ? exitPrice.subtract(entryPrice)
-                    : entryPrice.subtract(exitPrice);
-        }
-
-        @Override
-        public String toString() {
-            return position + ": Buy @ " + entryPrice + " (" + entryTime + "), Sell @ " + exitPrice + " (" + exitTime
-                    + "), Profit: " + getProfit();
-        }
-    }
-
     public static List<Trade> runStrategy(List<Kline> klines, int shortPeriod, int longPeriod) {
         List<Trade> trades = new ArrayList<>();
 

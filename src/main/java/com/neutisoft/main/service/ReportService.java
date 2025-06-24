@@ -7,7 +7,7 @@ import com.neutisoft.main.entity.Kline;
 import com.neutisoft.main.indicator.Sma;
 import com.neutisoft.main.repository.KlineRepository;
 import com.neutisoft.main.strategy.SmaStrategy;
-import com.neutisoft.main.strategy.SmaStrategy.Trade;
+import com.neutisoft.main.strategy.Trade;
 
 import lombok.RequiredArgsConstructor;
 import okhttp3.OkHttpClient;
@@ -15,7 +15,6 @@ import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
