@@ -9,6 +9,7 @@ import com.neutisoft.main.repository.KlineRepository;
 import com.neutisoft.main.strategy.SmaStrategy;
 import com.neutisoft.main.strategy.SmaStrategy.Trade;
 
+import lombok.RequiredArgsConstructor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -27,10 +28,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class ReportService {
 
-	@Autowired
-	private KlineRepository klineRepository;
+	private final KlineRepository klineRepository;
 
 	public void fetchAndStoreBinanceCandles() {
 		try {
