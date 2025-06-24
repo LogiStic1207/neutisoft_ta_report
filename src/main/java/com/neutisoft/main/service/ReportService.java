@@ -32,7 +32,7 @@ import java.util.List;
 public class ReportService {
 
 	private static final OkHttpClient client = new OkHttpClient();
-	
+
 	private final KlineRepository klineRepository;
 
 	public void fetchAndStoreBinanceCandles() {
@@ -42,40 +42,40 @@ public class ReportService {
 					.url(url)
 					.build();
 
-			Response response = client.newCall(request).execute();
+			try (Response response = client.newCall(request).execute()) {
+				if (!response.isSuccessful()) {
+					System.out.println("❌ Failed to fetch data: " + response.code());
+					return;
+				}
 
-			if (!response.isSuccessful()) {
-				System.out.println("❌ Failed to fetch data: " + response.code());
-				return;
+				ResponseBody body = response.body();
+				if (body == null) {
+					System.out.println("❌ Empty response body");
+					return;
+				}
+
+				ObjectMapper mapper = new ObjectMapper();
+				List<List<Object>> klines = mapper.readValue(body.string(), new TypeReference<List<List<Object>>>() {
+				});
+
+				if (klines.isEmpty()) {
+					System.out.println("❌ No data received from Binance");
+					return;
+				}
+
+				for (List<Object> k : klines) {
+					LocalDateTime openTime = Instant.ofEpochMilli(((Number) k.get(0)).longValue())
+							.atZone(ZoneId.systemDefault()).toLocalDateTime();
+					BigDecimal high = new BigDecimal((String) k.get(2));
+					BigDecimal low = new BigDecimal((String) k.get(3));
+					BigDecimal close = new BigDecimal((String) k.get(4));
+
+					Kline kline = new Kline(openTime, high, low, close);
+					klineRepository.save(kline);
+				}
+
+				System.out.println("✅ Binance candles saved to DB.");
 			}
-
-			ResponseBody body = response.body();
-			if (body == null) {
-				System.out.println("❌ Empty response body");
-				return;
-			}
-
-			ObjectMapper mapper = new ObjectMapper();
-			List<List<Object>> klines = mapper.readValue(body.string(), new TypeReference<List<List<Object>>>() {
-			});
-
-			if (klines.isEmpty()) {
-				System.out.println("❌ No data received from Binance");
-				return;
-			}
-
-			for (List<Object> k : klines) {
-				LocalDateTime openTime = Instant.ofEpochMilli(((Number) k.get(0)).longValue())
-						.atZone(ZoneId.systemDefault()).toLocalDateTime();
-				BigDecimal high = new BigDecimal((String) k.get(2));
-				BigDecimal low = new BigDecimal((String) k.get(3));
-				BigDecimal close = new BigDecimal((String) k.get(4));
-
-				Kline kline = new Kline(openTime, high, low, close);
-				klineRepository.save(kline);
-			}
-
-			System.out.println("✅ Binance candles saved to DB.");
 
 		} catch (Exception e) {
 			System.out.println("❌ Exception during Binance fetch: " + e.getMessage());
