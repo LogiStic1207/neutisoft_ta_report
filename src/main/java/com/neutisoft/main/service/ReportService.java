@@ -17,6 +17,10 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import com.neutisoft.main.strategy.SmaStrategy;
+import com.neutisoft.main.strategy.SmaStrategy.Trade;
+
+import java.util.ArrayList;
 
 @Service
 public class ReportService {
@@ -51,6 +55,35 @@ public class ReportService {
 		}
 
 		System.out.println("✅ Binance candles saved to DB.");
+	}
+
+	public List<String> runSmaCrossoverStrategy() {
+		List<Kline> klines = klineRepository.findAllByOrderByOpenTimeAsc();
+
+		// 🔽 [Add this block to print SMA + Close prices for manual debugging]
+		double[] shortSma = Sma.calculate(klines, 5);
+		double[] longSma = Sma.calculate(klines, 20);
+
+		System.out.println("=== SMA Debug Print ===");
+		for (int i = 0; i < klines.size(); i++) {
+			System.out.printf("Time: %s | Short SMA: %.2f | Long SMA: %.2f | Close: %s%n",
+					klines.get(i).getOpenTime(),
+					shortSma[i],
+					longSma[i],
+					klines.get(i).getClose());
+		}
+
+		List<Trade> trades = SmaStrategy.runStrategy(klines, 5, 20);
+		List<String> results = new ArrayList<>();
+		BigDecimal totalProfit = BigDecimal.ZERO;
+
+		for (Trade trade : trades) {
+			results.add(trade.toString());
+			totalProfit = totalProfit.add(trade.getProfit());
+		}
+
+		results.add("📈 Total Profit: $" + totalProfit.setScale(2, RoundingMode.HALF_UP));
+		return results;
 	}
 
 	public ReportResponse simulateSimpleStrategy() {
@@ -88,6 +121,15 @@ public class ReportService {
 		BigDecimal profit = sellPrice.subtract(buyPrice);
 		BigDecimal profitRate = profit.divide(buyPrice, 4, RoundingMode.HALF_UP)
 				.multiply(BigDecimal.valueOf(100));
+		System.out.println("=== Debug: Close Prices ===");
+		for (int i = klines.size() - 5; i < klines.size(); i++) {
+			System.out.println("Close[" + i + "] = " + klines.get(i).getClose());
+		}
+
+		System.out.println("=== Debug: SMA(5) Values ===");
+		for (int i = sma.length - 5; i < sma.length; i++) {
+			System.out.println("SMA[" + i + "] = " + sma[i]);
+		}
 
 		return new ReportResponse(
 				buyTime.toString(),
