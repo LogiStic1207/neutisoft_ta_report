@@ -1,14 +1,21 @@
 package com.neutisoft.main.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.neutisoft.main.dto.ReportResponse;
 import com.neutisoft.main.entity.Kline;
 import com.neutisoft.main.indicator.Sma;
 import com.neutisoft.main.repository.KlineRepository;
+import com.neutisoft.main.strategy.SmaStrategy;
+import com.neutisoft.main.strategy.SmaStrategy.Trade;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.ResponseBody;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -16,11 +23,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.List;
-import com.neutisoft.main.strategy.SmaStrategy;
-import com.neutisoft.main.strategy.SmaStrategy.Trade;
-
 import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class ReportService {
@@ -29,38 +33,58 @@ public class ReportService {
 	private KlineRepository klineRepository;
 
 	public void fetchAndStoreBinanceCandles() {
-		String url = "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=100";
-		RestTemplate restTemplate = new RestTemplate();
+		try {
+			String url = "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=100";
+			OkHttpClient client = new OkHttpClient();
 
-		@SuppressWarnings("unchecked")
-		ResponseEntity<List<List<Object>>> response = (ResponseEntity<List<List<Object>>>) (ResponseEntity<?>) restTemplate
-				.getForEntity(url, List.class);
+			Request request = new Request.Builder()
+					.url(url)
+					.build();
 
-		List<List<Object>> klines = response.getBody();
+			Response response = client.newCall(request).execute();
 
-		if (klines == null || klines.isEmpty()) {
-			System.out.println("❌ No data received from Binance");
-			return;
+			if (!response.isSuccessful()) {
+				System.out.println("❌ Failed to fetch data: " + response.code());
+				return;
+			}
+
+			ResponseBody body = response.body();
+			if (body == null) {
+				System.out.println("❌ Empty response body");
+				return;
+			}
+
+			ObjectMapper mapper = new ObjectMapper();
+			List<List<Object>> klines = mapper.readValue(body.string(), new TypeReference<List<List<Object>>>() {
+			});
+
+			if (klines.isEmpty()) {
+				System.out.println("❌ No data received from Binance");
+				return;
+			}
+
+			for (List<Object> k : klines) {
+				LocalDateTime openTime = Instant.ofEpochMilli(((Number) k.get(0)).longValue())
+						.atZone(ZoneId.systemDefault()).toLocalDateTime();
+				BigDecimal high = new BigDecimal((String) k.get(2));
+				BigDecimal low = new BigDecimal((String) k.get(3));
+				BigDecimal close = new BigDecimal((String) k.get(4));
+
+				Kline kline = new Kline(openTime, high, low, close);
+				klineRepository.save(kline);
+			}
+
+			System.out.println("✅ Binance candles saved to DB.");
+
+		} catch (Exception e) {
+			System.out.println("❌ Exception during Binance fetch: " + e.getMessage());
+			e.printStackTrace();
 		}
-
-		for (List<Object> k : klines) {
-			LocalDateTime openTime = Instant.ofEpochMilli(((Number) k.get(0)).longValue())
-					.atZone(ZoneId.systemDefault()).toLocalDateTime();
-			BigDecimal high = new BigDecimal((String) k.get(2));
-			BigDecimal low = new BigDecimal((String) k.get(3));
-			BigDecimal close = new BigDecimal((String) k.get(4));
-
-			Kline kline = new Kline(openTime, high, low, close);
-			klineRepository.save(kline);
-		}
-
-		System.out.println("✅ Binance candles saved to DB.");
 	}
 
 	public List<String> runSmaCrossoverStrategy() {
 		List<Kline> klines = klineRepository.findAllByOrderByOpenTimeAsc();
 
-		// 🔽 [Add this block to print SMA + Close prices for manual debugging]
 		double[] shortSma = Sma.calculate(klines, 5);
 		double[] longSma = Sma.calculate(klines, 20);
 
@@ -121,6 +145,7 @@ public class ReportService {
 		BigDecimal profit = sellPrice.subtract(buyPrice);
 		BigDecimal profitRate = profit.divide(buyPrice, 4, RoundingMode.HALF_UP)
 				.multiply(BigDecimal.valueOf(100));
+
 		System.out.println("=== Debug: Close Prices ===");
 		for (int i = klines.size() - 5; i < klines.size(); i++) {
 			System.out.println("Close[" + i + "] = " + klines.get(i).getClose());
