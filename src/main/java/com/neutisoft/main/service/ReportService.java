@@ -2,6 +2,7 @@ package com.neutisoft.main.service;
 
 import com.neutisoft.main.dto.ReportResponse;
 import com.neutisoft.main.entity.Kline;
+import com.neutisoft.main.indicator.Sma;
 import com.neutisoft.main.repository.KlineRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,11 +11,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -23,12 +24,14 @@ public class ReportService {
 	@Autowired
 	private KlineRepository klineRepository;
 
-	@SuppressWarnings("unchecked")
 	public void fetchAndStoreBinanceCandles() {
 		String url = "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=100";
 		RestTemplate restTemplate = new RestTemplate();
 
-		ResponseEntity<List> response = restTemplate.getForEntity(url, List.class);
+		@SuppressWarnings("unchecked")
+		ResponseEntity<List<List<Object>>> response = (ResponseEntity<List<List<Object>>>) (ResponseEntity<?>) restTemplate
+				.getForEntity(url, List.class);
+
 		List<List<Object>> klines = response.getBody();
 
 		if (klines == null || klines.isEmpty()) {
@@ -54,7 +57,7 @@ public class ReportService {
 		List<Kline> klines = klineRepository.findAllByOrderByOpenTimeAsc();
 		int period = 5;
 
-		List<Double> sma = calculateSMA(klines, period);
+		double[] sma = Sma.calculate(klines, period);
 
 		boolean holding = false;
 		BigDecimal buyPrice = BigDecimal.ZERO;
@@ -64,7 +67,7 @@ public class ReportService {
 
 		for (int i = period; i < klines.size(); i++) {
 			BigDecimal close = klines.get(i).getClose();
-			double smaVal = sma.get(i - period);
+			double smaVal = sma[i];
 
 			if (!holding && close.doubleValue() > smaVal) {
 				holding = true;
@@ -77,13 +80,13 @@ public class ReportService {
 			}
 		}
 
-		if (!holding || sellTime == null) {
+		if (!holding || sellTime == null || buyTime == null) {
 			return new ReportResponse("N/A", "N/A", "0", "0%", "$0");
 		}
 
 		Duration duration = Duration.between(buyTime, sellTime);
 		BigDecimal profit = sellPrice.subtract(buyPrice);
-		BigDecimal profitRate = profit.divide(buyPrice, 4, BigDecimal.ROUND_HALF_UP)
+		BigDecimal profitRate = profit.divide(buyPrice, 4, RoundingMode.HALF_UP)
 				.multiply(BigDecimal.valueOf(100));
 
 		return new ReportResponse(
@@ -91,20 +94,6 @@ public class ReportService {
 				sellTime.toString(),
 				duration.toHours() + " hours",
 				profitRate.stripTrailingZeros().toPlainString() + "%",
-				"$" + profit.setScale(2, BigDecimal.ROUND_HALF_UP));
-	}
-
-	private List<Double> calculateSMA(List<Kline> klines, int period) {
-		List<Double> sma = new ArrayList<>();
-
-		for (int i = 0; i <= klines.size() - period; i++) {
-			double sum = 0.0;
-			for (int j = i; j < i + period; j++) {
-				sum += klines.get(j).getClose().doubleValue();
-			}
-			sma.add(sum / period);
-		}
-
-		return sma;
+				"$" + profit.setScale(2, RoundingMode.HALF_UP));
 	}
 }
