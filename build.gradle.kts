@@ -27,8 +27,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0") 
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.1") 
 
-    runtimeOnly("com.h2database:h2")
-    // runtimeOnly("com.microsoft.sqlserver:mssql-jdbc")
+    runtimeOnly("com.microsoft.sqlserver:mssql-jdbc:12.6.3.jre11")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

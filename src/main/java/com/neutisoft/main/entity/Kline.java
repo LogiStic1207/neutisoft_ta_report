@@ -12,26 +12,26 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Kline {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	@Column(nullable = false)
-	private LocalDateTime openTime;
+    @Column(name = "open_time", nullable = false)
+    private LocalDateTime openTime;
 
-	@Column(nullable = false)
-	private BigDecimal high;
+    @Column(name = "[high]", nullable = false)
+    private BigDecimal high;
 
-	@Column(nullable = false)
-	private BigDecimal low;
+    @Column(name = "[low]", nullable = false)
+    private BigDecimal low;
 
-	@Column(nullable = false)
-	private BigDecimal close;
+    @Column(name = "[close]", nullable = false)
+    private BigDecimal close;
 
-	public Kline(LocalDateTime openTime, BigDecimal high, BigDecimal low, BigDecimal close) {
-		this.openTime = openTime;
-		this.high = high;
-		this.low = low;
-		this.close = close;
-	}
+    public Kline(LocalDateTime openTime, BigDecimal high, BigDecimal low, BigDecimal close) {
+        this.openTime = openTime;
+        this.high = high;
+        this.low = low;
+        this.close = close;
+    }
 }
