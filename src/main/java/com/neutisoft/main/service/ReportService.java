@@ -31,13 +31,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ReportService {
 
+	private static final OkHttpClient client = new OkHttpClient();
+	
 	private final KlineRepository klineRepository;
 
 	public void fetchAndStoreBinanceCandles() {
 		try {
 			String url = "https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1h&limit=100";
-			OkHttpClient client = new OkHttpClient();
-
 			Request request = new Request.Builder()
 					.url(url)
 					.build();
